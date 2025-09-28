@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "Main",
+    "ticket",
 ]
 
 MIDDLEWARE = [
@@ -76,9 +76,9 @@ WSGI_APPLICATION = 'HelpMe.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "HelpMe",
-        "USER": "enddown",
-        "PASSWORD": "",
+        "NAME": "helpme",
+        "USER": "postgres",
+        "PASSWORD": "password",
         "HOST": "localhost",
         "PORT": "5432",
     }
@@ -130,3 +130,5 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = "ticket.User"
