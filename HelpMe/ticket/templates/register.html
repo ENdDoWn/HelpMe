@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}HelpMe - Register{% endblock %}
+
+{% block content %}
+<!-- Tabs -->
+<div class="tabs">
+  <a href="{% url 'login' %}" class="tab" id="login-tab">Login</a>
+  <div class="tab active" id="register-tab">Register</div>
+</div>
+
+<!-- Register Form -->
+<form id="register-form" class="active" method="post" action="{% url 'register' %}">
+  {% csrf_token %}
+  <div class="register-feilds">
+    <div>
+      <div>
+        {{ form.first_name.label_tag }}
+        {{ form.first_name }}
+        {% if form.first_name.errors %}
+        <div class="error">{{ form.first_name.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+      <div>
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {% if form.username.errors %}
+        <div class="error">{{ form.username.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+      <div>
+        {{ form.password1.label_tag }}
+        {{ form.password1 }}
+        {% if form.password1.errors %}
+        <div class="error">{{ form.password1.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <div>
+        {{ form.last_name.label_tag }}
+        {{ form.last_name }}
+        {% if form.last_name.errors %}
+        <div class="error">{{ form.last_name.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+      <div>
+        {{ form.email.label_tag }}
+        {{ form.email }}
+        {% if form.email.errors %}
+        <div class="error">{{ form.email.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+      <div>
+        {{ form.password2.label_tag }}
+        {{ form.password2 }}
+        {% if form.password2.errors %}
+        <div class="error">{{ form.password2.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div>
+    {{ form.address.label_tag }}
+    {{ form.address }}
+    {% if form.address.errors %}
+    <div class="error">{{ form.address.errors|join:", " }}</div>
+    {% endif %}
+  </div>
+  <div class="organization-section">
+    <div>
+      {{ form.organization.label_tag }}
+      {{ form.organization }}
+      {% if form.organization.errors %}
+      <div class="error">{{ form.organization.errors|join:", " }}</div>
+      {% endif %}
+    </div>
+    <div>
+      {{ form.new_organization.label_tag }}
+      {{ form.new_organization }}
+      {% if form.new_organization.errors %}
+      <div class="error">{{ form.new_organization.errors|join:", " }}</div>
+      {% endif %}
+    </div>
+    {% if form.non_field_errors %}
+    <div class="error">
+      {% for error in form.non_field_errors %}
+        {{ error }}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  <button type="submit" class="btn">Register</button>
+
+  {% block extra_js %}
+  <script>
+    // Handle organization form interaction
+    const existingOrgSelect = document.getElementById('existing-org');
+    const newOrgInput = document.getElementById('new-org');
+
+    existingOrgSelect.addEventListener('change', function() {
+      if (this.value) {
+        newOrgInput.value = '';
+        newOrgInput.disabled = true;
+      } else {
+        newOrgInput.disabled = false;
+      }
+    });
+
+    newOrgInput.addEventListener('input', function() {
+      if (this.value) {
+        existingOrgSelect.value = '';
+        existingOrgSelect.disabled = true;
+      } else {
+        existingOrgSelect.disabled = false;
+      }
+    });
+  </script>
+  {% endblock %}
+</form>
+{% endblock %}

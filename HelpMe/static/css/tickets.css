@@ -1,0 +1,64 @@
+.conversation-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.conversation-priority,
+.conversation-status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* Priority styles */
+.conversation-priority.low {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.conversation-priority.medium {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.conversation-priority.high {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Status styles */
+.conversation-status.open {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.conversation-status.in_progress {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.conversation-status.closed {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.no-tickets {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 1rem;
+}

@@ -1,45 +1,29 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import User
 
 
 # Organization
 class Organization(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
         return self.name
 
-# User
-class User(AbstractUser):
-    class Role(models.TextChoices):
-        ADMIN = "ADMIN", "Admin"
-        USER = "USER", "User"
-        AGENT = "AGENT", "Agent"
 
-    role = models.CharField(
-        max_length=20,
-        choices=Role.choices,
-        default=Role.USER
-    )
-    organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="users", null=True, blank=True
-    )
-
-    def __str__(self):
-        return f"{self.username} ({self.role})"
-
-# Profile
+# Profile (extends Django User)
 class Profile(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="profile"
     )
-    firstname = models.CharField(max_length=100)
-    lastname = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="members"
+    )
 
     def __str__(self):
-        return f"{self.firstname} {self.lastname}"
+        return self.user.get_full_name() or self.user.username
+
 
 # Ticket
 class Ticket(models.Model):
@@ -66,6 +50,7 @@ class Ticket(models.Model):
     def __str__(self):
         return f"{self.title} ({self.status})"
 
+
 # Attachment
 class Attachment(models.Model):
     ticket = models.ForeignKey(
@@ -73,6 +58,10 @@ class Attachment(models.Model):
     )
     file = models.FileField(upload_to="attachments/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Attachment for {self.ticket.title}"
+
 
 # Message
 class Message(models.Model):
@@ -85,6 +74,13 @@ class Message(models.Model):
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Message by {self.user.username} on {self.ticket.title}"
+
+
 # Notification
 class Notification(models.Model):
     recipient = models.ForeignKey(
@@ -95,6 +91,11 @@ class Notification(models.Model):
     )
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Notification for {self.recipient.username}"
+
 
 # FAQ
 class FAQ(models.Model):

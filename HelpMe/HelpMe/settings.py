@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "ticket",
+    'ticket',
 ]
 
 MIDDLEWARE = [
@@ -77,7 +77,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "helpme",
-        "USER": "postgres",
+        "USER": "enddown",
         "PASSWORD": "password",
         "HOST": "localhost",
         "PORT": "5432",
@@ -131,4 +131,4 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = "ticket.User"
+LOGIN_URL = ''
