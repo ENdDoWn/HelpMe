@@ -1,0 +1,200 @@
+{% extends 'base_main.html' %}
+
+{% load static %}
+
+{% block title %}HelpME - Chat{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let chatSocket = null;
+  let reconnectAttempts = 0;
+  const maxReconnectAttempts = 5;
+  const messagesContainer = document.querySelector('.messages');
+  const messageInput = document.querySelector('#messageInput');
+  const chatForm = document.querySelector('#chatForm');
+
+  function connectWebSocket() {
+    const wsScheme = 'ws://';
+    const wsPath = '/ws/chat/{{ ticket.id }}/';
+    const wsUrl = wsScheme + window.location.host + wsPath;
+    console.log('Attempting WebSocket connection to:', wsUrl);
+    
+    // Close existing connection if any
+    if (chatSocket) {
+        chatSocket.close();
+    }
+    
+    try {
+        chatSocket = new WebSocket(wsUrl);
+
+    chatSocket.onopen = function(e) {
+      console.log('WebSocket connection established');
+      reconnectAttempts = 0;
+      messageInput.disabled = false;
+      messageInput.placeholder = 'Type your message...';
+    };
+
+    chatSocket.onmessage = function(e) {
+      try {
+        const data = JSON.parse(e.data);
+        
+        if (data.error) {
+          console.error('Message error:', data.error);
+          return;
+        }
+
+        const message = data.message;
+        const username = data.username;
+        const timestamp = data.timestamp || new Date().toLocaleString();
+        const isCurrentUser = username === '{{ request.user.username }}';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isCurrentUser ? 'self' : 'other'}`;
+        
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'sender';
+        senderDiv.textContent = username;
+        
+        const textDiv = document.createElement('div');
+        textDiv.className = 'text';
+        textDiv.textContent = message;
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        timeSpan.textContent = timestamp;
+        
+        textDiv.appendChild(timeSpan);
+        messageDiv.appendChild(senderDiv);
+        messageDiv.appendChild(textDiv);
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } catch (error) {
+        console.error('Error processing message:', error);
+      }
+    };
+
+    chatSocket.onclose = function(e) {
+      console.log('WebSocket closed. Code:', e.code, 'Reason:', e.reason);
+      messageInput.disabled = true;
+      messageInput.placeholder = 'Connection lost. Reconnecting...';
+      
+      if (reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        console.log(`Reconnect attempt ${reconnectAttempts} of ${maxReconnectAttempts}`);
+        setTimeout(connectWebSocket, 2000 * reconnectAttempts);
+      } else {
+        messageInput.placeholder = 'Connection failed. Please check your connection and refresh.';
+        console.log('Max reconnection attempts reached. Please refresh the page.');
+      }
+    };
+
+    chatSocket.onerror = function(e) {
+      console.error('WebSocket error occurred:', e);
+      console.log('Current connection state:', chatSocket.readyState);
+      messageInput.disabled = true;
+      
+      if (chatSocket.readyState === WebSocket.CLOSED) {
+        console.log('Connection is closed. Verifying credentials...');
+        // You might want to verify your session is still valid
+        fetch('/ws/chat/{{ ticket.id }}/')
+          .then(response => {
+            if (!response.ok) {
+              messageInput.placeholder = 'Please check your login status and permissions.';
+              throw new Error('Authentication check failed');
+            }
+          })
+          .catch(error => console.error('Auth check failed:', error));
+      }
+    };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      messageInput.disabled = true;
+      messageInput.placeholder = 'Connection failed. Please refresh the page.';
+    }
+  }
+
+  chatForm.onsubmit = function(e) {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    
+    if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+      chatSocket.send(JSON.stringify({
+        'message': message
+      }));
+      messageInput.value = '';
+    }
+  };
+
+  // Initial connection
+  connectWebSocket();
+
+  // Scroll to bottom on load
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  // Clean up on page unload
+  window.onbeforeunload = function() {
+    if (chatSocket) {
+      chatSocket.close();
+    }
+  };
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+  <div class="chat-body">
+    <div class="chat-header">
+      <a href="{% if request.user.groups.all.0.name == 'Agents' %}{% url 'main_agent' %}{% else %}{% url 'main_user' %}{% endif %}" class="back-btn">← Back</a>
+      <h2>{{ ticket.title }}</h2>
+    </div>
+
+    <div class="messages">
+      {% for message in messages %}
+        <div class="message {% if message.user == request.user %}self{% else %}other{% endif %}">
+          <div class="sender">{{ message.user.get_full_name|default:message.user.username }}</div>
+          <div class="text">
+            {{ message.msg }}
+            <span class="time">{{ message.created_at|date:"h:i A d/M/Y" }}</span>
+          </div>
+        </div>
+      {% empty %}
+      {% endfor %}
+    </div>
+
+    <form class="chat-input" id="chatForm">
+      {% csrf_token %}
+      <input type="text" id="messageInput" placeholder="Type your message..." required>
+      <button type="submit">➤</button>
+    </form>
+  </div>
+
+  <div class="ticket-info">
+    <h3>Ticket Information</h3>
+    <div>
+      <label>Created on</label>
+      <div class="value">{{ ticket.created_at|date:"d M Y, h:i A" }}</div>
+    </div>
+    <div>
+      <label>Priority</label>
+      <div class="priority {{ ticket.priority|lower }}">{{ ticket.get_priority_display }}</div>
+    </div>
+    <div>
+      <label>Status</label>
+      <div class="value">{{ ticket.get_status_display }}</div>
+    </div>
+    <div>
+      <label>Owner</label>
+      <div class="value">{{ ticket.creator.get_full_name|default:ticket.creator.username }}</div>
+    </div>
+    <div>
+      <label>Description</label>
+      <div class="value" style="white-space: pre-wrap;">{{ ticket.description }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

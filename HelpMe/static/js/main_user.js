@@ -3,11 +3,16 @@ function openModal() {
 }
 
 function closeModal() {
-    document.getElementById("conversationModal").style.display = "none";
+    const modal = document.getElementById("conversationModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
 }
 
-//fix modal auto show when refresh
-closeModal();
+// Only call closeModal if we're on a page with the modal
+if (document.getElementById("conversationModal")) {
+    closeModal();
+}
 
 window.onclick = function(event) {
     const modal = document.getElementById("conversationModal");

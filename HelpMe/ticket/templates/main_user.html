@@ -11,7 +11,7 @@
 
 <div class="conversation-list">
   {% for ticket in tickets %}
-  <div class="conversation">
+  <div class="conversation" onclick="window.location.href='{% url 'chat' ticket.id %}'" style="cursor: pointer;">
     <div class="conversation-title">{{ ticket.title }}</div>
     <div class="conversation-info">
       <span class="conversation-priority {{ ticket.priority|lower }}">{{ ticket.priority }}</span>
@@ -37,19 +37,25 @@
       <div class="form-group">
         <label for="id_title">Subject</label>
         {{ form.title }}
-        <div class="error" id="title-error"></div>
+        {% if form.title.errors %}
+      <div class="error">{{ form.title.errors.0 }}</div>
+      {% endif %}
       </div>
 
       <div class="form-group">
         <label for="id_priority">Priority</label>
         {{ form.priority }}
-        <div class="error" id="priority-error"></div>
+        {% if form.priority.errors %}
+      <div class="error">{{ form.priority.errors.0 }}</div>
+      {% endif %}
       </div>
 
       <div class="form-group">
         <label for="id_description">Description</label>
         {{ form.description }}
-        <div class="error" id="description-error"></div>
+        {% if form.description.errors %}
+      <div class="error">{{ form.description.errors.0 }}</div>
+      {% endif %}
       </div>
 
       <div class="modal-actions">
@@ -64,74 +70,21 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-document.getElementById('ticketForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Clear previous errors
-    document.querySelectorAll('.error').forEach(el => el.textContent = '');
-    
-    const formData = new FormData(this);
-    
-    fetch('{% url "create_ticket" %}', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Add new ticket to the list
-            const ticketList = document.querySelector('.conversation-list');
-            const newTicket = document.createElement('div');
-            newTicket.className = 'conversation';
-            newTicket.innerHTML = `
-                <div class="conversation-title">${data.ticket.title}</div>
-                <div class="conversation-info">
-                    <span class="conversation-priority ${data.ticket.priority.toLowerCase()}">${data.ticket.priority}</span>
-                    <span class="conversation-status open">OPEN</span>
-                    <span class="conversation-date">${data.ticket.created_at}</span>
-                </div>
-            `;
-            
-            // If there's a "no tickets" message, remove it
-            const noTickets = ticketList.querySelector('.no-tickets');
-            if (noTickets) {
-                noTickets.remove();
-            }
-            
-            // Add the new ticket at the beginning of the list
-            ticketList.insertBefore(newTicket, ticketList.firstChild);
-            
-            // Close modal and show success message
+// Show SweetAlert for success messages
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
             closeModal();
             Swal.fire({
                 icon: 'success',
-                title: 'Success',
-                text: data.message,
+                title: 'Success!',
+                text: '{{ message }}',
+                confirmButtonColor: '#3085d6'
             });
-            
-            // Clear form
-            this.reset();
-        } else {
-            // Show errors
-            Object.entries(data.errors).forEach(([field, errors]) => {
-                const errorDiv = document.getElementById(`${field}-error`);
-                if (errorDiv) {
-                    errorDiv.textContent = errors.join(', ');
-                }
-            });
-        }
-    })
-    .catch(error => {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'An error occurred while creating the ticket.',
-        });
-    });
-});
+        {% endif %}
+    {% endfor %}
+{% endif %}
 </script>
 {% endblock %}

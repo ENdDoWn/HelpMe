@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'ticket',
 ]
 
@@ -68,6 +69,30 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'HelpMe.wsgi.application'
+ASGI_APPLICATION = 'HelpMe.asgi.application'
+
+# Channels Configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "CONFIG": {
+            "capacity": 1500,  # default 100
+        },
+    },
+}
+
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '*'
+]
+
+# WebSocket Config
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
 
 
 # Database
