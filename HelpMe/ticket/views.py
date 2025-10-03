@@ -26,7 +26,7 @@ class LoginView(View):
             user = form.get_user()
             login(request, user)
             messages.success(request, 'Successfully logged in!')
-            if user.groups.filter(name='Agents').exists():
+            if user.groups.filter(name='Agents').exists() or user.groups.filter(name='Admin').exists():
                 return redirect('main_agent')
             return redirect('main_user')
         else:
@@ -55,7 +55,7 @@ class LogoutView(View):
 
     def get(self, request):
         logout(request)
-        messages.success(request, "You have been logged out successfully.")
+        messages.warning(request, "You have been logged out.")
         return redirect('login')
 
 from django.contrib.auth.mixins import UserPassesTestMixin

@@ -9,7 +9,116 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static "js/chat.js" %}%}"></script>
+<script>
+  let chatSocket = null;
+  const messagesContainer = document.querySelector('.messages');
+  const messageInput = document.querySelector('#messageInput');
+  const chatForm = document.querySelector('#chatForm');
+
+  function connectWebSocket() {
+    const wsUrl = 'ws://' + window.location.host + '/ws/chat/{{ ticket.id }}/';
+    console.log('Attempting WebSocket connection to:', wsUrl);
+    if (chatSocket) {
+        chatSocket.close();
+    }
+
+    try {
+        chatSocket = new WebSocket(wsUrl);
+        let pingInterval;
+
+    chatSocket.onopen = function(e) {
+      console.log('WebSocket connection established');
+      reconnectAttempts = 0;
+      messageInput.disabled = false;
+      messageInput.placeholder = 'Type your message...';
+
+      // send ping every 30 seconds
+      pingInterval = setInterval(() => {
+        if (chatSocket.readyState === WebSocket.OPEN) {
+          chatSocket.send(JSON.stringify({ 'type': 'ping' }));
+        }
+      }, 30000);
+    };
+
+    chatSocket.onmessage = function(e) {
+      try {
+        const data = JSON.parse(e.data);
+        // Handle ping/pong
+        if (data.type === 'pong') {
+            console.log('Received pong from server');
+            return;
+        }
+        
+        if (data.error) {
+          console.error('Message error:', data.error);
+          return;
+        }
+
+        const message = data.message;
+        const username = data.username;
+        const timestamp = data.timestamp || new Date().toLocaleString();
+        const isCurrentUser = username === '{{ request.user.username }}';
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isCurrentUser ? 'self' : 'other'}`;
+
+        const senderDiv = document.createElement('div');
+        senderDiv.className = 'sender';
+        senderDiv.textContent = username;
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'text';
+        textDiv.textContent = message;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'time';
+        timeSpan.textContent = timestamp;
+
+        textDiv.appendChild(timeSpan);
+        messageDiv.appendChild(senderDiv);
+        messageDiv.appendChild(textDiv);
+
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      } catch (error) {
+        console.error('Error processing message:', error);
+      }
+    };
+
+    chatSocket.onclose = function(e) {
+      console.log('WebSocket closed. Code:', e.code, 'Reason:', e.reason);
+      if (pingInterval) {
+        clearInterval(pingInterval);
+      }
+    };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      messageInput.disabled = true;
+      messageInput.placeholder = 'Connection failed. Please refresh the page.';
+    }
+  }
+
+  chatForm.onsubmit = function(e) {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    
+    if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+      chatSocket.send(JSON.stringify({
+        'message': message
+      }));
+      messageInput.value = '';
+    }
+  };
+  connectWebSocket();
+
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  window.onbeforeunload = function() {
+    if (chatSocket) {
+      chatSocket.close();
+    }
+  };
+</script>
 {% endblock %}
 
 {% block content %}
