@@ -1,0 +1,68 @@
+{% extends 'base_main.html' %}
+
+{% block title %}HelpME - Agent Dashboard{% endblock %}
+
+{% block content %}
+<div class="welcome">
+  Hello Agent {{ request.user.first_name|default:request.user.username }}, here are all active tickets:
+</div>
+
+<div class="tickets-container">
+  <div class="filters">
+    <select id="priorityFilter" onchange="filterTickets()">
+      <option value="">All Priorities</option>
+      <option value="HIGH">High Priority</option>
+      <option value="MEDIUM">Medium Priority</option>
+      <option value="LOW">Low Priority</option>
+    </select>
+    <select id="statusFilter" onchange="filterTickets()">
+      <option value="">All Status</option>
+      <option value="OPEN">Open</option>
+      <option value="IN_PROGRESS">In Progress</option>
+      <option value="CLOSED">Closed</option>
+    </select>
+  </div>
+
+  <div class="conversation-list">
+    {% for ticket in tickets %}
+    <div class="conversation" onclick="window.location.href='{% url 'chat' ticket.id %}'" style="cursor: pointer;"
+         data-priority="{{ ticket.priority }}" data-status="{{ ticket.status }}">
+      <div class="conversation-header">
+        <div class="conversation-title">{{ ticket.title }}</div>
+        <div class="conversation-creator">by {{ ticket.creator.get_full_name|default:ticket.creator.username }}</div>
+      </div>
+      <div class="conversation-info">
+        <span class="conversation-priority {{ ticket.priority|lower }}">{{ ticket.get_priority_display }}</span>
+        <span class="conversation-status {{ ticket.status|lower }}">{{ ticket.get_status_display }}</span>
+        <span class="conversation-date">{{ ticket.created_at|date:"Y-m-d H:i" }}</span>
+      </div>
+      <div class="conversation-preview">
+        {{ ticket.description|truncatechars:100 }}
+      </div>
+    </div>
+    {% empty %}
+    <div class="no-tickets">
+      No tickets available at the moment.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTickets() {
+  const priorityFilter = document.getElementById('priorityFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
+  const tickets = document.querySelectorAll('.conversation');
+
+  tickets.forEach(ticket => {
+    const priority = ticket.dataset.priority;
+    const status = ticket.dataset.status;
+    const shouldShow = (!priorityFilter || priority === priorityFilter) && 
+                      (!statusFilter || status === statusFilter);
+    ticket.style.display = shouldShow ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

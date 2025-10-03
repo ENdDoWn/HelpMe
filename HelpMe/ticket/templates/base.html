@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}HelpMe{% endblock %}</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'css/login.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/organization.css' %}" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body>
+    <div class="container">
+      <!-- Logo -->
+      <div class="logo">HelpMe</div>
+
+      {% block content %}{% endblock %}
+    </div>
+
+    <script src="{% static 'js/login.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+
+    {% if messages %}
+    <script>
+        {% for message in messages %}
+            Swal.fire({
+                icon: '{% if message.tags == "error" %}error{% else %}{{ message.tags }}{% endif %}',
+                title: '{{ message.tags|capfirst }}',
+                text: '{{ message }}',
+            })
+            document.body.classList.remove('swal2-height-auto');
+        {% endfor %}
+    </script>
+    {% endif %}
+  </body>
+</html>

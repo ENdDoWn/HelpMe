@@ -1,97 +1,29 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HelpMe - Login / Register</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="{% static 'css/login.css' %}" />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  </head>
-  <body>
-    <div class="container">
-      <!-- Logo -->
-      <div class="logo">HelpMe</div>
+{% extends 'base.html' %}
 
-      <!-- Tabs -->
-      <div class="tabs">
-        <div class="tab {% if active_tab == 'login' %}active{% endif %}" id="login-tab">Login</div>
-        <div class="tab {% if active_tab == 'register' %}active{% endif %}" id="register-tab">Register</div>
-      </div>
+{% block title %}HelpMe - Login{% endblock %}
 
-      <!-- Login Form -->
-      <form id="login-form" class="{% if active_tab == 'login' %}active{% endif %}" method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        <div>
-          <label>Username</label>
-          <input type="text" name="username" placeholder="Enter your username" required />
-        </div>
-        <div>
-          <label>Password</label>
-          <input type="password" name="password" placeholder="Enter your password" required />
-        </div>
-        <button type="submit" class="btn">Login</button>
-        <div class="extra"><a href="#">Forgot password?</a></div>
-      </form>
+{% block content %}
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" id="login-tab">Login</div>
+  <a href="{% url 'register' %}" class="tab" id="register-tab">Register</a>
+</div>
 
-      <!-- Register Form -->
-      <form id="register-form" class="{% if active_tab == 'register' %}active{% endif %}" method="post" action="{% url 'register' %}">
-        {% csrf_token %}
-        <div class="register-feilds">
-          <div>
-            <div>
-              <label>Firstname</label>
-              <input type="text" name="first_name" placeholder="Enter your firstname" required/>
-            </div>
-            <div>
-              <label>Username</label>
-              <input type="text" name="username" placeholder="Enter your username" required/>
-            </div>
-            <div>
-              <label>Password</label>
-              <input type="password" name="password1" placeholder="Create a password" required/>
-            </div>
-          </div>
-          <div>
-            <div>
-              <label>Lastname</label>
-              <input type="text" name="last_name" placeholder="Enter your lastname" required/>
-            </div>
-            <div>
-              <label>Email</label>
-              <input type="email" name="email" placeholder="Enter your email" required/>
-            </div>
-            <div>
-              <label>Confirm Password</label>
-              <input type="password" name="password2" placeholder="Confirm your password" required/>
-            </div>
-          </div>
-        </div>
-        <div>
-          <label>Address</label>
-          <input type="text" name="address" placeholder="Enter your Address" required/>
-        </div>
-        <div>
-          <label>Organization</label>
-          <input type="text" name="organization" placeholder="Enter your organization name" required/>
-        </div>
-        <button type="submit" class="btn">Register</button>
-      </form>
-    <script src="{% static 'js/login.js' %}"></script>
-  </body>
-{% if messages %}
-    <script>
-        {% for message in messages %}
-        Swal.fire({
-            icon: '{{ message.tags }}',
-            title: '{{ message.tags|capfirst }}',
-            text: '{{ message }}',
-        });
-        {% endfor %}
-    </script>
-{% endif %}
-</html>
+<!-- Login Form -->
+<form id="login-form" class="active" method="post" action="{% url 'login' %}">
+  {% csrf_token %}
+  {% for field in form %}
+  <div>
+    <label>{{ field.label }}</label>
+    {{ field }}
+    {% if field.errors %}
+    <div class="error">
+      {{ field.errors|join:", " }}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn">Login</button>
+  <div class="extra"><a href="#">Forgot password?</a></div>
+</form>
+{% endblock %}
