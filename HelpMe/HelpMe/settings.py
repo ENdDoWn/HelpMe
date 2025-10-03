@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -76,7 +77,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
         "CONFIG": {
-            "capacity": 1500,  # default 100
+            "capacity": 1500,
         },
     },
 }
@@ -84,7 +85,6 @@ CHANNEL_LAYERS = {
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    '*'
 ]
 
 # WebSocket Config
@@ -102,7 +102,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "helpme",
-        "USER": "enddown",
+        "USER": "postgres",
         "PASSWORD": "password",
         "HOST": "localhost",
         "PORT": "5432",
