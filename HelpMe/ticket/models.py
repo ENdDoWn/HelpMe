@@ -5,18 +5,21 @@ from django.contrib.auth.models import User
 # Organization
 class Organization(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    members = models.ManyToManyField(User, related_name="organizations", blank=True)
 
     def __str__(self):
         return self.name
 
 
-# Profile
+# Profile (extends Django User)
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="profile"
+    )
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
-    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, related_name="profiles", blank=True, null=True)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="members"
+    )
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -40,7 +43,9 @@ class Ticket(models.Model):
     priority = models.CharField(max_length=50, choices=Priority.choices, default=Priority.MEDIUM)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    creator = models.OneToOneField(User, on_delete=models.CASCADE, related_name="created_ticket")
+    creator = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="tickets"
+    )
 
     def __str__(self):
         return f"{self.title} ({self.status})"
@@ -48,7 +53,9 @@ class Ticket(models.Model):
 
 # Attachment
 class Attachment(models.Model):
-    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="attachment")
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.CASCADE, related_name="attachments"
+    )
     file = models.FileField(upload_to="attachments/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -58,8 +65,12 @@ class Attachment(models.Model):
 
 # Message
 class Message(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="message")
-    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="message")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="messages"
+    )
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.CASCADE, related_name="messages"
+    )
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -72,14 +83,21 @@ class Message(models.Model):
 
 # Notification
 class Notification(models.Model):
-    recipients = models.ManyToManyField(User, related_name="notifications")
-    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="notification")
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="notifications"
+    )
+    ticket = models.ForeignKey(
+        Ticket, on_delete=models.CASCADE, related_name="notifications"
+    )
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ['-created_at']
+
     def __str__(self):
-        return f"Notification for {', '.join([u.username for u in self.recipients.all()])}"
+        return f"Notification for {self.recipient.username}"
 
 
 # FAQ
@@ -91,12 +109,14 @@ class FAQ(models.Model):
         ('TECHNICAL', 'Technical Issues'),
         ('OTHER', 'Other'),
     ]
-
+    
     question = models.CharField(max_length=255)
     answer = models.TextField()
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='COMMON')
-    creator = models.OneToOneField(User, on_delete=models.CASCADE, related_name="faq")
     created_at = models.DateTimeField(auto_now_add=True)
+    creator = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="faqs"
+    )
 
     def __str__(self):
         return self.question[:50]

@@ -10,6 +10,27 @@
 
 {% block extra_js %}
 <script>
+  // Request notification permission
+  document.addEventListener('DOMContentLoaded', function() {
+      if (Notification.permission !== 'granted') {
+          Notification.requestPermission();
+      }
+  });
+
+  function showNotification(message, username, ticketTitle) {
+      if (Notification.permission === "granted" && document.hidden) {
+          const notification = new Notification(ticketTitle, {
+              body: `${username}: ${message}`,
+              icon: '/static/images/logo.png'
+          });
+
+          notification.onclick = function() {
+              window.focus();
+              this.close();
+          };
+      }
+  }
+
   let chatSocket = null;
   const messagesContainer = document.querySelector('.messages');
   const messageInput = document.querySelector('#messageInput');
@@ -80,6 +101,19 @@
 
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // Show notification for new messages
+        if (Notification.permission === 'granted' && document.hidden) {
+          const notification = new Notification('New Message in Ticket', {
+            body: `${username}: ${message}`,
+            icon: '/static/images/logo.png', // Add your logo path here
+          });
+          
+          notification.onclick = function() {
+            window.focus();
+            this.close();
+          };
+        }
       } catch (error) {
         console.error('Error processing message:', error);
       }
