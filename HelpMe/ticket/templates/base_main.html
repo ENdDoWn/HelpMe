@@ -14,14 +14,14 @@
     {% block extra_css %}{% endblock %}
   </head>
   <body>
-    <canvas id="techCanvas"></canvas>
+    <canvas id="Canvas"></canvas>
     <!-- Top Navbar -->
     <div class="navbar">
       <h1>HelpME</h1>
       <div class="nav-links">
-        <a href="{% url 'main_user' %}" {% if request.resolver_match.url_name == 'main_user' %}class="active"{% endif %}>Main Page</a>
-        {% comment %} <a href="{% url 'organization' %}" {% if request.resolver_match.url_name == 'organization' %}class="active"{% endif %}>Organization</a> {% endcomment %}
-        {% comment %} <a href="{% url 'profile' %}" {% if request.resolver_match.url_name == 'profile' %}class="active"{% endif %}>Profile</a> {% endcomment %}
+        <a href="{% url 'main_user' %}" {% if request.resolver_match.url_name == 'main_user' or request.resolver_match.url_name == 'main_agent' %}class="active"{% endif %}>Main Page</a>
+        <a href="{% url 'faq' %}" {% if request.resolver_match.url_name == 'faq' %}class="active"{% endif %}>FAQ</a>
+        <a href="{% url 'profile' %}" {% if request.resolver_match.url_name == 'profile' %}class="active"{% endif %}>Profile</a>
         <a href="{% url 'logout' %}">Logout</a>
       </div>
       <div class="username">{{ request.user.username }}</div>
@@ -35,6 +35,24 @@
     {% block modals %}{% endblock %}
 
     <script src="{% static 'js/main_user.js' %}"></script>
-    {% block extra_js %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    // Show SweetAlert for success messages
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                closeModal();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '{{ message }}',
+                    confirmButtonColor: '#3085d6'
+                });
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    </script>
+    {% block extra_js %}
+    {% endblock %}
   </body>
 </html>

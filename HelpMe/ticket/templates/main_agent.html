@@ -25,19 +25,16 @@
 
   <div class="conversation-list">
     {% for ticket in tickets %}
-    <div class="conversation" onclick="window.location.href='{% url 'chat' ticket.id %}'" style="cursor: pointer;"
-         data-priority="{{ ticket.priority }}" data-status="{{ ticket.status }}">
-      <div class="conversation-header">
+    <div class="conversation" data-priority="{{ ticket.priority }}" data-status="{{ ticket.status }}" onclick="window.location.href='{% url 'chat' ticket.id %}'">
+      <div class="conversation-header" onclick="toggleTicket(this.parentElement)">
         <div class="conversation-title">{{ ticket.title }}</div>
         <div class="conversation-creator">by {{ ticket.creator.get_full_name|default:ticket.creator.username }}</div>
+        <div class="conversation-creator">Description: {{ ticket.description }}</div>
       </div>
       <div class="conversation-info">
-        <span class="conversation-priority {{ ticket.priority|lower }}">{{ ticket.get_priority_display }}</span>
-        <span class="conversation-status {{ ticket.status|lower }}">{{ ticket.get_status_display }}</span>
+        <span class="conversation-priority {{ ticket.priority|lower }}" style="padding: 3px 8px; border-radius: 4px; {% if ticket.priority == 'LOW' %}background: #28a745; color: white;{% elif ticket.priority == 'MEDIUM' %}background: #ffc107; color: black;{% else %}background: #dc3545; color: white;{% endif %}">{{ ticket.get_priority_display }}</span>
+        <span class="conversation-status {{ ticket.status|lower }}" style="padding: 3px 8px; border-radius: 4px; {% if ticket.status == 'open' %}background: #17a2b8; color: white;{% elif ticket.status == 'in_progress' %}background: #007bff; color: white;{% else %}background: #6c757d; color: white;{% endif %}">{{ ticket.get_status_display }}</span>
         <span class="conversation-date">{{ ticket.created_at|date:"Y-m-d H:i" }}</span>
-      </div>
-      <div class="conversation-preview">
-        {{ ticket.description|truncatechars:100 }}
       </div>
     </div>
     {% empty %}
@@ -63,6 +60,12 @@ function filterTickets() {
                       (!statusFilter || status === statusFilter);
     ticket.style.display = shouldShow ? 'block' : 'none';
   });
+}
+
+function toggleTicket(ticketElement) {
+  const details = ticketElement.querySelector('.ticket-details');
+  const isHidden = details.style.display === 'none';
+  details.style.display = isHidden ? 'block' : 'none';
 }
 </script>
 {% endblock %}

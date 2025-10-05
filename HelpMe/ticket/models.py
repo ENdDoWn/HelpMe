@@ -5,21 +5,18 @@ from django.contrib.auth.models import User
 # Organization
 class Organization(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    members = models.ManyToManyField(User, related_name="organizations", blank=True)
 
     def __str__(self):
         return self.name
 
 
-# Profile (extends Django User)
+# Profile
 class Profile(models.Model):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="profile"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
-    organization = models.ForeignKey(
-        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="members"
-    )
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, related_name="profiles", blank=True, null=True)
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
@@ -43,9 +40,7 @@ class Ticket(models.Model):
     priority = models.CharField(max_length=50, choices=Priority.choices, default=Priority.MEDIUM)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    creator = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="tickets"
-    )
+    creator = models.OneToOneField(User, on_delete=models.CASCADE, related_name="created_ticket")
 
     def __str__(self):
         return f"{self.title} ({self.status})"
@@ -53,9 +48,7 @@ class Ticket(models.Model):
 
 # Attachment
 class Attachment(models.Model):
-    ticket = models.ForeignKey(
-        Ticket, on_delete=models.CASCADE, related_name="attachments"
-    )
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="attachment")
     file = models.FileField(upload_to="attachments/")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -65,12 +58,8 @@ class Attachment(models.Model):
 
 # Message
 class Message(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="messages"
-    )
-    ticket = models.ForeignKey(
-        Ticket, on_delete=models.CASCADE, related_name="messages"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="message")
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="message")
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -83,29 +72,31 @@ class Message(models.Model):
 
 # Notification
 class Notification(models.Model):
-    recipient = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="notifications"
-    )
-    ticket = models.ForeignKey(
-        Ticket, on_delete=models.CASCADE, related_name="notifications"
-    )
+    recipients = models.ManyToManyField(User, related_name="notifications")
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name="notification")
     msg = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     read = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Notification for {self.recipient.username}"
+        return f"Notification for {', '.join([u.username for u in self.recipients.all()])}"
 
 
 # FAQ
 class FAQ(models.Model):
-    question = models.TextField()
+    CATEGORY_CHOICES = [
+        ('COMMON', 'Common Questions'),
+        ('ACCOUNT', 'Account Related'),
+        ('DOCUMENT', 'Documentation'),
+        ('TECHNICAL', 'Technical Issues'),
+        ('OTHER', 'Other'),
+    ]
+
+    question = models.CharField(max_length=255)
     answer = models.TextField()
-    category = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='COMMON')
+    creator = models.OneToOneField(User, on_delete=models.CASCADE, related_name="faq")
     created_at = models.DateTimeField(auto_now_add=True)
-    creator = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="faqs"
-    )
 
     def __str__(self):
         return self.question[:50]

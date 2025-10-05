@@ -1,0 +1,64 @@
+{% extends 'base_main.html' %}
+
+{% block title %}FAQ Details - {{ faq.question }}{% endblock %}
+
+{% block content %}
+<div class="faq-details-container">
+    <div class="faq-details">
+        <a href="{% url 'faq' %}" class="back-button">&larr; Back to FAQs</a>
+        <h2>{{ faq.question }}</h2>
+        <span class="category-badge">{{ faq.get_category_display }}</span>
+        <div class="answer-content">
+            {{ faq.answer|linebreaks }}
+        </div>
+        <div class="meta-info">
+            Created: {{ faq.created_at|date:"F j, Y" }}
+        </div>
+    </div>
+</div>
+
+<style>
+.faq-details-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+.faq-details {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.back-button {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.answer-content {
+    margin: 20px 0;
+    line-height: 1.6;
+}
+
+.meta-info {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
+</style>
+{% endblock %}

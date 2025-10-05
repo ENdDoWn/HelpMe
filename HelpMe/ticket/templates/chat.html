@@ -125,7 +125,11 @@
 <div class="chat-container">
   <div class="chat-body">
     <div class="chat-header">
-      <a href="{% if request.user.groups.all.0.name == 'Agents' %}{% url 'main_agent' %}{% else %}{% url 'main_user' %}{% endif %}" class="back-btn">← Back</a>
+      <a href="{% if request.user.groups.all.0.name == 'Agents' %}{% url 'main_agent' %}{% else %}{% url 'main_user' %}{% endif %}" class="back-btn">
+        <button style="text-decoration: none; border: none; background: none; color: white; font-size: 16px; cursor: pointer;">←
+          Back
+        </button>
+      </a>
       <h2>{{ ticket.title }}</h2>
     </div>
 
@@ -171,6 +175,14 @@
       <label>Description</label>
       <div class="value" style="white-space: pre-wrap;">{{ ticket.description }}</div>
     </div>
+    {% if request.user.groups.all.0.name == 'Agents' and ticket.status != 'closed' %}
+    <div class="ticket-actions">
+      <form action="{% url 'close_ticket' ticket.id %}" method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        <button type="submit" class="close-ticket-btn" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Close Ticket</button>
+      </form>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

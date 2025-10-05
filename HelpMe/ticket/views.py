@@ -2,14 +2,11 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth import login, logout
 from django.contrib import messages
-from django.http import JsonResponse
 from .forms import LoginForm, RegisterForm, TicketForm
-from .models import Ticket
+from .models import Ticket, FAQ
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.http import JsonResponse
-from .forms import LoginForm, RegisterForm, TicketForm
-from .models import Ticket, Message
+from .models import *
 
 class LoginView(View):
     def get(self, request):
@@ -98,7 +95,6 @@ class CreateTicketView(LoginRequiredMixin, View):
             ticket = form.save(commit=False)
             ticket.creator = request.user
             ticket.save()
-            messages.success(request, 'Ticket created successfully!')
             return redirect('chat', ticket_id=ticket.id)
         else:
             tickets = Ticket.objects.filter(creator=request.user).order_by('-created_at')
@@ -108,18 +104,32 @@ class CreateTicketView(LoginRequiredMixin, View):
                 'form': form
             })
 
+class CloseTicketView(LoginRequiredMixin, UserPassesTestMixin, View):
+    login_url = 'login'
+
+    def test_func(self):
+        return self.request.user.groups.filter(name='Agents').exists()
+
+    def post(self, request, ticket_id):
+        try:
+            ticket = Ticket.objects.get(id=ticket_id)
+            ticket.status = 'closed'
+            ticket.save()
+            messages.success(request, 'Ticket has been closed successfully.')
+            return redirect('chat', ticket_id=ticket_id)
+        except Ticket.DoesNotExist:
+            messages.error(request, 'Ticket not found.')
+            return redirect('main_agent')
+
 class ChatView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request, ticket_id):
         try:
             ticket = Ticket.objects.get(id=ticket_id)
-            
-            # Check if user has permission to access this ticket
             if not (request.user.groups.filter(name='Agents').exists() or ticket.creator == request.user):
                 messages.error(request, 'Access denied. You do not have permission to view this ticket.')
                 return redirect('main_user')
-                
             chat_messages = ticket.messages.all().order_by('created_at')
             return render(request, 'chat.html', {
                 'ticket': ticket,
@@ -128,3 +138,64 @@ class ChatView(LoginRequiredMixin, View):
         except Ticket.DoesNotExist:
             messages.error(request, 'Ticket not found.')
             return redirect('main_user')
+
+class FAQView(LoginRequiredMixin, View):
+    login_url = 'login'
+
+    def get(self, request):
+        faqs = FAQ.objects.all().order_by('category', '-created_at')
+        return render(request, 'FAQ.html', {
+            'faqs': faqs,
+            'is_agent': request.user.groups.filter(name='Agents').exists(),
+            'category_choices': FAQ.CATEGORY_CHOICES
+        })
+
+    def post(self, request):
+        if not request.user.groups.filter(name='Agents').exists():
+            messages.error(request, 'Only agents can create FAQs')
+            return redirect('faq')
+        
+        question = request.POST.get('question')
+        answer = request.POST.get('answer')
+        category = request.POST.get('category')
+        
+        if question and answer and category:
+            FAQ.objects.create(
+                question=question,
+                answer=answer,
+                category=category,
+                creator=request.user
+            )
+            messages.success(request, 'FAQ created successfully')
+        else:
+            messages.error(request, 'All fields are required')
+        
+        return redirect('faq')
+
+class FAQDetailView(LoginRequiredMixin, View):
+    login_url = 'login'
+
+    def get(self, request, faq_id):
+        try:
+            faq = FAQ.objects.get(id=faq_id)
+            return render(request, 'faq_details.html', {'faq': faq})
+        except FAQ.DoesNotExist:
+            messages.error(request, 'FAQ not found')
+            return redirect('faq')
+
+class ProfileView(LoginRequiredMixin, View):
+    login_url = 'login'
+
+    def get(self, request):
+        profile = Profile.objects.get(user=request.user)
+        return render(request, 'profile.html', {'user': request.user, 'profile': profile})
+
+    def post(self, request):
+        user = request.user
+        profile = user.profile
+        profile.address = request.POST.get('bio', profile.address)
+        profile.phone_number = request.POST.get('phone_number', profile.phone_number)
+        profile.save()
+
+        messages.success(request, 'Profile updated successfully')
+        return redirect('profile')

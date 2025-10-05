@@ -1,0 +1,169 @@
+{% extends 'base_main.html' %}
+
+{% block title %}HelpME - FAQ{% endblock %}
+
+{% block content %}
+<div class="faq-container">
+    <h1>Frequently Asked Questions</h1>
+
+    {% if is_agent %}
+    <button onclick="openCreateModal()" class="btn btn-primary mb-3">Create New FAQ</button>
+    {% endif %}
+
+    <div class="category-filter mb-4">
+        <select id="categoryFilter" onchange="filterFAQs()" class="form-control">
+            <option value="">All Categories</option>
+            <option value="COMMON">Common Questions</option>
+            <option value="ACCOUNT">Account Related</option>
+            <option value="DOCUMENT">Documentation</option>
+            <option value="TECHNICAL">Technical Issues</option>
+            <option value="OTHER">Other</option>
+        </select>
+    </div>
+
+    <div class="faq-list">
+        {% for faq in faqs %}
+        <div class="faq-item" data-category="{{ faq.category }}" onclick="window.location.href='{% url 'faq_details' faq.id %}'">
+            <h4>{{ faq.question }}</h4>
+            <p class="faq-preview">{{ faq.answer|truncatewords:30 }}</p>
+            <span class="category-badge">{{ faq.get_category_display }}</span>
+        </div>
+        {% empty %}
+        <p>No FAQs available at the moment.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create FAQ Modal -->
+<div id="createFaqModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCreateModal()">&times;</span>
+        <h2>Create New FAQ</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="category">Category:</label>
+                <select name="category" class="form-control" required>
+                    {% for value, label in category_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="question">Question:</label>
+                <input type="text" name="question" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="answer">Answer:</label>
+                <textarea name="answer" class="form-control" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Create FAQ</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.faq-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.create-faq-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 30px;
+}
+
+.faq-item {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 5px;
+}
+
+.close {
+    float: right;
+    cursor: pointer;
+    font-size: 28px;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.faq-item {
+    cursor: pointer;
+}
+
+.faq-preview {
+    color: #666;
+}
+</style>
+
+<script>
+function openCreateModal() {
+    document.getElementById('createFaqModal').style.display = 'block';
+}
+
+function closeCreateModal() {
+    document.getElementById('createFaqModal').style.display = 'none';
+}
+
+function filterFAQs() {
+    const category = document.getElementById('categoryFilter').value;
+    const faqs = document.querySelectorAll('.faq-item');
+    
+    faqs.forEach(faq => {
+        if (!category || faq.dataset.category === category) {
+            faq.style.display = 'block';
+        } else {
+            faq.style.display = 'none';
+        }
+    });
+}
+
+window.onclick = function(event) {
+    if (event.target == document.getElementById('createFaqModal')) {
+        closeCreateModal();
+    }
+}
+</script>
+{% endblock %}
