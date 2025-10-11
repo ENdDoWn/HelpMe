@@ -58,6 +58,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
+            
+            # Handle ping messages
+            if data.get('type') == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong'}))
+                return
+            
             message = data.get('message', '').strip()
             
             if not message:
@@ -79,7 +85,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'type': 'chat_message',
                     'message': message,
                     'username': user.username,
-                    'timestamp': saved_message.created_at.strftime("%Y-%m-%d %H:%M:%S")
+                    'timestamp': saved_message.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    'is_file': saved_message.is_file_message,
+                    'file_name': saved_message.file_name if saved_message.is_file_message else None,
+                    'file_size': saved_message.file_size_mb if saved_message.is_file_message else None
                 }
             )
         except Exception as e:
@@ -95,7 +104,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'message': event['message'],
                 'username': event['username'],
-                'timestamp': event.get('timestamp')
+                'timestamp': event.get('timestamp'),
+                'is_file': event.get('is_file', False),
+                'file_name': event.get('file_name'),
+                'file_url': event.get('file_url')
             }))
         except Exception as e:
             print(f"WebSocket chat_message error: {e}")

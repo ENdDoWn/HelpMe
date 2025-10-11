@@ -8,6 +8,7 @@ urlpatterns = [
     path('main/', views.MainView.as_view(), name='main_user'),
     path('ticket/create/', views.CreateTicketView.as_view(), name='create_ticket'),
     path('ticket/<int:ticket_id>/chat/', views.ChatView.as_view(), name='chat'),
+    path('ticket/<int:ticket_id>/upload/', views.FileUploadView.as_view(), name='file_upload'),
     path('agent/', views.AgentView.as_view(), name='main_agent'),
     path('close_ticket/<int:ticket_id>/', views.CloseTicketView.as_view(), name='close_ticket'),
     path('faq/', views.FAQView.as_view(), name='faq'),

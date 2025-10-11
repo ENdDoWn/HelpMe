@@ -35,6 +35,110 @@
   const messagesContainer = document.querySelector('.messages');
   const messageInput = document.querySelector('#messageInput');
   const chatForm = document.querySelector('#chatForm');
+  const fileInput = document.querySelector('#fileInput');
+  const dropZone = document.querySelector('.chat-body');
+
+  // Drag and drop functionality
+  let dragCounter = 0;
+
+  dropZone.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    dragCounter++;
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      dropZone.classList.remove('drag-over');
+    }
+  });
+
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+  });
+
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dragCounter = 0;
+    dropZone.classList.remove('drag-over');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadFile(files[0]);
+    }
+  });
+
+  // File upload function
+  function uploadFile(file) {
+    // Check file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert('File size too large. Maximum 10MB allowed.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Show uploading message
+    showUploadingMessage(file.name);
+
+    fetch(`/ticket/{{ ticket.id }}/upload/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // File uploaded successfully - message will be sent via WebSocket by the server
+        console.log('File uploaded successfully:', data.file_name);
+      } else {
+        alert('Upload failed: ' + (data.error || 'Unknown error'));
+      }
+      removeUploadingMessage();
+    })
+    .catch(error => {
+      console.error('Upload error:', error);
+      alert('Upload failed: ' + error.message);
+      removeUploadingMessage();
+    });
+  }
+
+  function showUploadingMessage(fileName) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message self uploading';
+    messageDiv.innerHTML = `
+      <div class="sender">{{ request.user.username }}</div>
+      <div class="text">
+        📤 Uploading ${fileName}...
+        <span class="time">now</span>
+      </div>
+    `;
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function removeUploadingMessage() {
+    const uploadingMsg = document.querySelector('.message.uploading');
+    if (uploadingMsg) {
+      uploadingMsg.remove();
+    }
+  }
+
+  // File input change handler
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      if (e.target.files.length > 0) {
+        uploadFile(e.target.files[0]);
+        e.target.value = ''; // Reset input
+      }
+    });
+  }
 
   function connectWebSocket() {
     const wsUrl = 'ws://' + window.location.host + '/ws/chat/{{ ticket.id }}/';
@@ -79,6 +183,7 @@
         const username = data.username;
         const timestamp = data.timestamp || new Date().toLocaleString();
         const isCurrentUser = username === '{{ request.user.username }}';
+        const isFile = data.is_file || false;
 
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isCurrentUser ? 'self' : 'other'}`;
@@ -89,7 +194,17 @@
 
         const textDiv = document.createElement('div');
         textDiv.className = 'text';
-        textDiv.textContent = message;
+        
+        if (isFile) {
+          textDiv.innerHTML = `
+            <div class="file-message">
+              <i class="file-icon">📎</i>
+              <span class="file-name">${data.file_name}</span>
+            </div>
+          `;
+        } else {
+          textDiv.textContent = message;
+        }
 
         const timeSpan = document.createElement('span');
         timeSpan.className = 'time';
@@ -106,7 +221,7 @@
         if (Notification.permission === 'granted' && document.hidden) {
           const notification = new Notification('New Message in Ticket', {
             body: `${username}: ${message}`,
-            icon: '/static/images/logo.png', // Add your logo path here
+            icon: '/static/images/logo.png',
           });
           
           notification.onclick = function() {
@@ -172,7 +287,16 @@
         <div class="message {% if message.user == request.user %}self{% else %}other{% endif %}">
           <div class="sender">{{ message.user.get_full_name|default:message.user.username }}</div>
           <div class="text">
-            {{ message.msg }}
+            {% if message.is_file_message %}
+              <div class="file-message">
+                <i class="file-icon">📎</i>
+                <a href="{{ message.file.url }}" target="_blank" class="file-name">
+                  {{ message.file_name }}
+                </a>
+              </div>
+            {% else %}
+              {{ message.msg }}
+            {% endif %}
             <span class="time">{{ message.created_at|date:"h:i A d/M/Y" }}</span>
           </div>
         </div>
@@ -182,7 +306,9 @@
 
     <form class="chat-input" id="chatForm">
       {% csrf_token %}
-      <input type="text" id="messageInput" placeholder="Type your message..." required>
+      <input type="file" id="fileInput" style="display: none;" accept="*/*">
+      <button type="button" class="file-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+      <input type="text" id="messageInput" placeholder="Type your message or drag & drop files..." required>
       <button type="submit">➤</button>
     </form>
   </div>

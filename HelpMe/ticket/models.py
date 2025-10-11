@@ -71,7 +71,9 @@ class Message(models.Model):
     ticket = models.ForeignKey(
         Ticket, on_delete=models.CASCADE, related_name="messages"
     )
-    msg = models.TextField()
+    msg = models.TextField(blank=True, null=True)
+    file = models.FileField(upload_to="chat_files/", blank=True, null=True)
+    file_name = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -79,6 +81,10 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message by {self.user.username} on {self.ticket.title}"
+    
+    @property
+    def is_file_message(self):
+        return bool(self.file)
 
 
 # Notification

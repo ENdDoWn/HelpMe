@@ -2,10 +2,10 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.contrib.auth import login, logout
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import JsonResponse
+import json
 from .forms import LoginForm, RegisterForm, TicketForm
-from .models import Ticket, FAQ
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
 from .models import *
 
 class LoginView(View):
@@ -55,7 +55,6 @@ class LogoutView(View):
         messages.warning(request, "You have been logged out.")
         return redirect('login')
 
-from django.contrib.auth.mixins import UserPassesTestMixin
 
 class MainView(LoginRequiredMixin, View):
     login_url = 'login'
@@ -199,3 +198,64 @@ class ProfileView(LoginRequiredMixin, View):
 
         messages.success(request, 'Profile updated successfully')
         return redirect('profile')
+
+
+class FileUploadView(LoginRequiredMixin, View):
+    login_url = 'login'
+
+    def post(self, request, ticket_id):
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            
+            ticket = Ticket.objects.get(id=ticket_id)
+            
+            # Check if user has access to ticket
+            if not (request.user.groups.filter(name='Agents').exists() or ticket.creator == request.user):
+                return JsonResponse({'error': 'Access denied'}, status=403)
+            
+            uploaded_file = request.FILES.get('file')
+            if not uploaded_file:
+                return JsonResponse({'error': 'No file uploaded'}, status=400)
+            
+            # Check file size (limit to 10MB)
+            max_size = 10 * 1024 * 1024  # 10MB
+            if uploaded_file.size > max_size:
+                return JsonResponse({'error': 'File size too large. Maximum 10MB allowed.'}, status=400)
+            
+            # Create message with file
+            message = Message.objects.create(
+                user=request.user,
+                ticket=ticket,
+                file=uploaded_file,
+                file_name=uploaded_file.name,
+                msg=f"📎 {uploaded_file.name}"
+            )
+            
+            # Send message through WebSocket to avoid duplication
+            channel_layer = get_channel_layer()
+            room_group_name = f'chat_{ticket_id}'
+            
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': f"📎 {uploaded_file.name}",
+                    'username': request.user.username,
+                    'timestamp': message.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    'is_file': True,
+                    'file_name': uploaded_file.name,
+                    'file_url': message.file.url
+                }
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message_id': message.id,
+                'file_name': uploaded_file.name
+            })
+            
+        except Ticket.DoesNotExist:
+            return JsonResponse({'error': 'Ticket not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
