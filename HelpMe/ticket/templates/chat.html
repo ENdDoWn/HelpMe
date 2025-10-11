@@ -6,29 +6,168 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+<style>
+  /* Inline fallback styles for notifications */
+  #notificationContainer {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 99999 !important;
+    width: 350px !important;
+    pointer-events: none !important;
+  }
+  
+  #notificationContainer .custom-notification {
+    background: white !important;
+    border-left: 4px solid #007bff !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    margin-bottom: 10px !important;
+    padding: 16px !important;
+    opacity: 0 !important;
+    transform: translateX(370px) !important;
+    transition: all 0.3s ease !important;
+    pointer-events: auto !important;
+    font-family: 'Poppins', sans-serif !important;
+  }
+  
+  #notificationContainer .custom-notification.show {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+  }
+  
+  #notificationContainer .notification-title {
+    margin: 0 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+  }
+  
+  #notificationContainer .notification-body {
+    margin: 8px 0 !important;
+    font-size: 13px !important;
+    color: #666 !important;
+  }
+  
+  #notificationContainer .notification-close {
+    float: right !important;
+    background: none !important;
+    border: none !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    color: #999 !important;
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Request notification permission
+  // Initialize notification system when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
-      if (Notification.permission !== 'granted') {
-          Notification.requestPermission();
-      }
+    console.log('DOM loaded, checking notification container...');
+    const container = document.getElementById('notificationContainer');
+    if (container) {
+      console.log('Notification container found:', container);
+    } else {
+      console.error('Notification container NOT found!');
+      // Create container if it doesn't exist
+      const newContainer = document.createElement('div');
+      newContainer.id = 'notificationContainer';
+      newContainer.className = 'notification-container';
+      document.body.appendChild(newContainer);
+      console.log('Created notification container:', newContainer);
+    }
   });
 
-  function showNotification(message, username, ticketTitle) {
-      if (Notification.permission === "granted" && document.hidden) {
-          const notification = new Notification(ticketTitle, {
-              body: `${username}: ${message}`,
-              icon: '/static/images/logo.png'
-          });
-
-          notification.onclick = function() {
-              window.focus();
-              this.close();
-          };
+  // Custom In-App Notification System
+  function showCustomNotification(title, message, username, type = 'info') {
+    console.log('Creating custom notification:', { title, message, username, type });
+    
+    const container = document.getElementById('notificationContainer');
+    if (!container) {
+      console.error('Notification container not found!');
+      return;
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `custom-notification ${type}`;
+    
+    // Create unique ID for this notification
+    const notificationId = 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    notification.id = notificationId;
+    
+    // Get current time
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    // Truncate long messages
+    const truncatedMessage = message.length > 100 ? message.substring(0, 100) + '...' : message;
+    
+    notification.innerHTML = `
+      <div class="notification-header">
+        <h4 class="notification-title">${title}</h4>
+        <button class="notification-close" onclick="closeNotification('${notificationId}')" type="button">&times;</button>
+      </div>
+      <p class="notification-body">
+        <strong>${username}:</strong> ${truncatedMessage}
+      </p>
+      <div class="notification-time">${timeString}</div>
+    `;
+    
+    // Add click handler to focus window
+    notification.addEventListener('click', function(e) {
+      if (!e.target.classList.contains('notification-close')) {
+        window.focus();
+        // Optionally scroll to latest message
+        const messagesContainer = document.querySelector('.messages');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       }
+    });
+    
+    // Add to container
+    container.appendChild(notification);
+    console.log('Notification added to container:', notification);
+    
+    // Trigger show animation
+    setTimeout(() => {
+      notification.classList.add('show');
+      console.log('Notification show class added');
+    }, 100);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      closeNotification(notificationId);
+    }, 5000);
+  }
+  
+  function closeNotification(notificationId) {
+    console.log('Closing notification:', notificationId);
+    const notification = document.getElementById(notificationId);
+    if (notification) {
+      notification.classList.add('hide');
+      notification.classList.remove('show');
+      
+      // Remove from DOM after animation
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+          console.log('Notification removed from DOM');
+        }
+      }, 300);
+    }
+  }
+  
+  // Make closeNotification available globally
+  window.closeNotification = closeNotification;
+  
+  function showNotification(message, username, ticketTitle) {
+    // Only show custom notification if page is visible and user is not the sender
+    if (username !== '{{ request.user.username }}') {
+      showCustomNotification(ticketTitle, message, username, 'info');
+    }
   }
 
   let chatSocket = null;
@@ -217,17 +356,13 @@
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // Show notification for new messages
-        if (Notification.permission === 'granted' && document.hidden) {
-          const notification = new Notification('New Message in Ticket', {
-            body: `${username}: ${message}`,
-            icon: '/static/images/logo.png',
-          });
-          
-          notification.onclick = function() {
-            window.focus();
-            this.close();
-          };
+        // Show custom notification for new messages from other users
+        if (!isCurrentUser) {
+          if (isFile) {
+            showCustomNotification('{{ ticket.title }}', `📎 Shared a file: ${data.file_name}`, username, 'file');
+          } else {
+            showCustomNotification('{{ ticket.title }}', message, username, 'info');
+          }
         }
       } catch (error) {
         console.error('Error processing message:', error);
@@ -271,6 +406,9 @@
 {% endblock %}
 
 {% block content %}
+<!-- Custom Notification Container -->
+<div class="notification-container" id="notificationContainer"></div>
+
 <div class="chat-container">
   <div class="chat-body">
     <div class="chat-header">
