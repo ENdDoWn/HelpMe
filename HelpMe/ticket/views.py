@@ -4,8 +4,7 @@ from django.contrib.auth import login, logout
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
-import json
-from .forms import LoginForm, RegisterForm, TicketForm
+from .forms import *
 from .models import *
 
 class LoginView(View):
@@ -186,19 +185,53 @@ class ProfileView(LoginRequiredMixin, View):
     login_url = 'login'
 
     def get(self, request):
-        profile = Profile.objects.get(user=request.user)
-        return render(request, 'profile.html', {'user': request.user, 'profile': profile})
+        try:
+            profile = Profile.objects.get(user=request.user)
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=request.user)
+
+        user_form = UserForm(instance=request.user, user=request.user)
+        profile_form = ProfileForm(instance=profile)
+
+        return render(request, 'profile.html', {
+            'user': request.user, 
+            'profile': profile,
+            'user_form': user_form,
+            'profile_form': profile_form
+        })
 
     def post(self, request):
-        user = request.user
-        profile = user.profile
-        profile.address = request.POST.get('bio', profile.address)
-        profile.phone_number = request.POST.get('phone_number', profile.phone_number)
-        profile.save()
+        try:
+            profile = Profile.objects.get(user=request.user)
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=request.user)
+        
+        user_form = UserForm(request.POST, instance=request.user, user=request.user)
+        profile_form = ProfileForm(request.POST, instance=profile)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user = user_form.save(commit=False)
+            new_password = user_form.cleaned_data.get('new_password')
+            if new_password:
+                user.set_password(new_password)
+                user.save()
+                profile_form.save()
+                messages.success(request, 'Profile and password updated successfully! Please log in again.')
+                logout(request)
+                return redirect('login')
 
-        messages.success(request, 'Profile updated successfully')
-        return redirect('profile')
-
+            user.save()
+            profile_form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+            return render(request, 'profile.html', {
+                'user': request.user,
+                'profile': profile,
+                'user_form': user_form,
+                'profile_form': profile_form
+            })
 
 class FileUploadView(LoginRequiredMixin, View):
     login_url = 'login'
@@ -207,23 +240,20 @@ class FileUploadView(LoginRequiredMixin, View):
         try:
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
-            
+
             ticket = Ticket.objects.get(id=ticket_id)
-            
-            # Check if user has access to ticket
+            # Check access
             if not (request.user.groups.filter(name='Agents').exists() or ticket.creator == request.user):
                 return JsonResponse({'error': 'Access denied'}, status=403)
-            
+
             uploaded_file = request.FILES.get('file')
             if not uploaded_file:
                 return JsonResponse({'error': 'No file uploaded'}, status=400)
-            
-            # Check file size (limit to 10MB)
+
             max_size = 10 * 1024 * 1024  # 10MB
             if uploaded_file.size > max_size:
                 return JsonResponse({'error': 'File size too large. Maximum 10MB allowed.'}, status=400)
-            
-            # Create message with file
+
             message = Message.objects.create(
                 user=request.user,
                 ticket=ticket,
@@ -231,11 +261,10 @@ class FileUploadView(LoginRequiredMixin, View):
                 file_name=uploaded_file.name,
                 msg=f"📎 {uploaded_file.name}"
             )
-            
-            # Send message through WebSocket to avoid duplication
+
             channel_layer = get_channel_layer()
             room_group_name = f'chat_{ticket_id}'
-            
+
             async_to_sync(channel_layer.group_send)(
                 room_group_name,
                 {
@@ -248,13 +277,13 @@ class FileUploadView(LoginRequiredMixin, View):
                     'file_url': message.file.url
                 }
             )
-            
+
             return JsonResponse({
                 'success': True,
                 'message_id': message.id,
                 'file_name': uploaded_file.name
             })
-            
+
         except Ticket.DoesNotExist:
             return JsonResponse({'error': 'Ticket not found'}, status=404)
         except Exception as e:

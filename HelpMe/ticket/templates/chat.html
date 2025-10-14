@@ -62,7 +62,6 @@
 
 {% block extra_js %}
 <script>
-  // Initialize notification system when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking notification container...');
     const container = document.getElementById('notificationContainer');
@@ -70,7 +69,6 @@
       console.log('Notification container found:', container);
     } else {
       console.error('Notification container NOT found!');
-      // Create container if it doesn't exist
       const newContainer = document.createElement('div');
       newContainer.id = 'notificationContainer';
       newContainer.className = 'notification-container';
@@ -79,7 +77,6 @@
     }
   });
 
-  // Custom In-App Notification System
   function showCustomNotification(title, message, username, type = 'info') {
     console.log('Creating custom notification:', { title, message, username, type });
     
@@ -88,22 +85,18 @@
       console.error('Notification container not found!');
       return;
     }
-    
-    // Create notification element
+
     const notification = document.createElement('div');
     notification.className = `custom-notification ${type}`;
-    
-    // Create unique ID for this notification
+
     const notificationId = 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     notification.id = notificationId;
-    
-    // Get current time
+
     const now = new Date();
     const timeString = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    
-    // Truncate long messages
+
     const truncatedMessage = message.length > 100 ? message.substring(0, 100) + '...' : message;
-    
+
     notification.innerHTML = `
       <div class="notification-header">
         <h4 class="notification-title">${title}</h4>
@@ -114,8 +107,7 @@
       </p>
       <div class="notification-time">${timeString}</div>
     `;
-    
-    // Add click handler to focus window
+
     notification.addEventListener('click', function(e) {
       if (!e.target.classList.contains('notification-close')) {
         window.focus();
@@ -126,17 +118,17 @@
         }
       }
     });
-    
+
     // Add to container
     container.appendChild(notification);
     console.log('Notification added to container:', notification);
-    
+
     // Trigger show animation
     setTimeout(() => {
       notification.classList.add('show');
       console.log('Notification show class added');
     }, 100);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
       closeNotification(notificationId);
@@ -149,8 +141,7 @@
     if (notification) {
       notification.classList.add('hide');
       notification.classList.remove('show');
-      
-      // Remove from DOM after animation
+
       setTimeout(() => {
         if (notification.parentNode) {
           notification.parentNode.removeChild(notification);
@@ -160,11 +151,9 @@
     }
   }
   
-  // Make closeNotification available globally
   window.closeNotification = closeNotification;
   
   function showNotification(message, username, ticketTitle) {
-    // Only show custom notification if page is visible and user is not the sender
     if (username !== '{{ request.user.username }}') {
       showCustomNotification(ticketTitle, message, username, 'info');
     }
@@ -211,7 +200,6 @@
 
   // File upload function
   function uploadFile(file) {
-    // Check file size (10MB limit)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       alert('File size too large. Maximum 10MB allowed.');
@@ -221,7 +209,6 @@
     const formData = new FormData();
     formData.append('file', file);
 
-    // Show uploading message
     showUploadingMessage(file.name);
 
     fetch(`/ticket/{{ ticket.id }}/upload/`, {
@@ -234,7 +221,6 @@
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        // File uploaded successfully - message will be sent via WebSocket by the server
         console.log('File uploaded successfully:', data.file_name);
       } else {
         alert('Upload failed: ' + (data.error || 'Unknown error'));
@@ -356,7 +342,6 @@
         messagesContainer.appendChild(messageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // Show custom notification for new messages from other users
         if (!isCurrentUser) {
           if (isFile) {
             showCustomNotification('{{ ticket.title }}', `📎 Shared a file: ${data.file_name}`, username, 'file');
@@ -406,7 +391,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- Custom Notification Container -->
 <div class="notification-container" id="notificationContainer"></div>
 
 <div class="chat-container">

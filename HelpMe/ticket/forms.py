@@ -86,14 +86,12 @@ class RegisterForm(UserCreationForm):
         
         if commit:
             user.save()
-            # Get or create organization
             organization = self.cleaned_data.get('organization')
             if not organization:
                 organization = Organization.objects.create(
                     name=self.cleaned_data['new_organization']
                 )
-            
-            # Create profile
+
             Profile.objects.create(
                 user=user,
                 address=self.cleaned_data['address'],
@@ -101,17 +99,62 @@ class RegisterForm(UserCreationForm):
             )
         return user
 
-
 # User Update Form
 class UserForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput(attrs={
+    old_password = forms.CharField(widget=forms.PasswordInput(attrs={
+        'placeholder': 'Enter current password',
+        'class': 'form-control'
+    }), required=False, label='Current Password')
+
+    new_password = forms.CharField(widget=forms.PasswordInput(attrs={
         'placeholder': 'Enter new password (optional)',
         'class': 'form-control'
-    }), required=False)
+    }), required=False, label='New Password')
+
+    confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={
+        'placeholder': 'Confirm new password',
+        'class': 'form-control'
+    }), required=False, label='Confirm New Password')
 
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "email", "password"]
+        fields = ["username", "first_name", "last_name", "email"]
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        for field_name, field in self.fields.items():
+            if field_name not in ['old_password', 'new_password', 'confirm_password']:
+                field.widget.attrs.update({'class': 'form-control'})
+
+    def clean(self):
+        cleaned_data = super().clean()
+        old_password = cleaned_data.get('old_password')
+        new_password = cleaned_data.get('new_password')
+        confirm_password = cleaned_data.get('confirm_password')
+        password_fields = [old_password, new_password, confirm_password]
+        filled_fields = [field for field in password_fields if field]
+
+        if filled_fields and len(filled_fields) != len(password_fields):
+            if not old_password:
+                self.add_error('old_password', 'Current password is required to change password.')
+            if not new_password:
+                self.add_error('new_password', 'New password is required.')
+            if not confirm_password:
+                self.add_error('confirm_password', 'Please confirm your new password.')
+
+        if old_password and new_password and confirm_password:
+            if self.user and not self.user.check_password(old_password):
+                self.add_error('old_password', 'Current password is incorrect.')
+
+            if new_password != confirm_password:
+                self.add_error('confirm_password', 'New passwords do not match.')
+
+            if len(new_password) < 8:
+                self.add_error('new_password', 'Password must be at least 8 characters long.')
+
+        return cleaned_data
 
 
 # Profile Form
@@ -119,6 +162,20 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ["phone_number", "address", "organization"]
+        widgets = {
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your phone number'
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your address',
+                'rows': 3
+            }),
+            'organization': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
 
 
 # Organization Form
@@ -151,7 +208,7 @@ class TicketForm(forms.ModelForm):
 
     def save(self, commit=True):
         ticket = super().save(commit=False)
-        ticket.status = Ticket.Status.OPEN  # Set default status
+        ticket.status = Ticket.Status.OPEN 
         if commit:
             ticket.save()
         return ticket
