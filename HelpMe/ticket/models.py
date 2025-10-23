@@ -17,8 +17,8 @@ class Profile(models.Model):
     )
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
-    organization = models.ForeignKey(
-        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name="members"
+    organization = models.ManyToManyField(
+        Organization, blank=True, related_name="members"
     )
 
     def __str__(self):
@@ -45,6 +45,9 @@ class Ticket(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="tickets"
+    )
+    assign = models.ManyToManyField(
+        User, blank=True, related_name="assigned_tickets"
     )
 
     def __str__(self):

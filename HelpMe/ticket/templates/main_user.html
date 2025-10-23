@@ -12,7 +12,7 @@
 <div class="conversation-list">
   {% for ticket in tickets %}
     {% if ticket.status == 'closed' %}
-    <div class="conversation" style="background-color: #f8f9fa; opacity: 0.6;">
+    <div class="conversation" style="background-color: #f8f9fa; opacity: 0.6;" onclick="window.location.href='{% url 'chat' ticket.id %}'">
       <div class="conversation-title">{{ ticket.title }}</div>
       <div class="conversation-info">
         <span class="conversation-priority {{ ticket.priority|lower }}" style="padding: 3px 8px; border-radius: 4px; {% if ticket.priority == 'LOW' %}background: #28a745; color: white;{% elif ticket.priority == 'MEDIUM' %}background: #ffc107; color: black;{% else %}background: #dc3545; color: white;{% endif %}">{{ ticket.priority }}</span>

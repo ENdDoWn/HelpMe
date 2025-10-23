@@ -161,7 +161,7 @@ class UserForm(forms.ModelForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ["phone_number", "address", "organization"]
+        fields = ["phone_number", "address"]
         widgets = {
             'phone_number': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -171,9 +171,6 @@ class ProfileForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Enter your address',
                 'rows': 3
-            }),
-            'organization': forms.Select(attrs={
-                'class': 'form-control'
             })
         }
 

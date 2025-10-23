@@ -426,6 +426,15 @@
       {% endfor %}
     </div>
 
+    {% if ticket.status != 'closed' %}
+    <form class="chat-input" id="chatForm">
+      {% csrf_token %}
+      <input type="file" id="fileInput" style="display: none;" accept="*/*" disabled>
+      <button type="button" class="file-btn" onclick="document.getElementById('fileInput').click()" disabled>📎</button>
+      <input type="text" id="messageInput" placeholder="Type your message or drag & drop files..." disabled>
+      <button type="submit" disabled>➤</button>
+    </form>
+    {% else %}
     <form class="chat-input" id="chatForm">
       {% csrf_token %}
       <input type="file" id="fileInput" style="display: none;" accept="*/*">
@@ -433,6 +442,7 @@
       <input type="text" id="messageInput" placeholder="Type your message or drag & drop files..." required>
       <button type="submit">➤</button>
     </form>
+    {% endif %}
   </div>
 
   <div class="ticket-info">
